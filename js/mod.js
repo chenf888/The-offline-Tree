@@ -7,17 +7,19 @@ let modInfo = {
 
 	discordName: "",
 	discordLink: "",
-	initialStartPoints: new Decimal (0), // Used for hard resets and new players
+	initialStartPoints: new Decimal(0), // Used for hard resets and new players
 	offlineLimit: 24,  // In hours
 }
 
 // Set your version in num and name
 let VERSION = {
-	num: "0.1",
+	num: "0.1.1",
 	name: "离线树",
 }
 
 let changelog = `<h1>更新日志</h1><br>
+    <h3>v0.1.1</h3><br>
+        更改了离线点数计算方式<br>
 	<h3>v0.1</h3><br>
 		- 初始版本，离线获得点数<br>
 		当前游戏时间大概为6小时，实际你只需<br>
@@ -29,20 +31,20 @@ let winText = `Congratulations! You have reached the end and beaten this game, b
 // (The ones here are examples, all official functions are already taken care of)
 var doNotCallTheseFunctionsEveryTick = ["blowUpEverything"]
 
-function getStartPoints(){
-    return new Decimal(modInfo.initialStartPoints)
+function getStartPoints() {
+	return new Decimal(modInfo.initialStartPoints)
 }
 
 // Determines if it should show points/sec
 // 离线树：只在处理离线时间时产生点数，在线时不增长
-function canGenPoints(){
+function canGenPoints() {
 	return player.offTime !== undefined && player.offTime.remain > 0
 }
 
 // Calculate points/sec!
 // 离线树：每分钟获得1离线点数 = 每秒 1/60 点
 function getPointGen() {
-	if(!canGenPoints())
+	if (!canGenPoints())
 		return new Decimal(0)
 
 	let gain = new Decimal(1).div(60)
@@ -53,8 +55,10 @@ function getPointGen() {
 }
 
 // You can add non-layer related variables that should to into "player" and be saved here, along with default values
-function addedPlayerData() { return {
-}}
+function addedPlayerData() {
+	return {
+	}
+}
 
 // Display extra things at the top of the page
 var displayThings = [
@@ -76,10 +80,10 @@ var backgroundStyle = {
 
 // You can change this if you have things that can be messed up by long tick lengths
 function maxTickLength() {
-	return(3600) // Default is 1 hour which is just arbitrarily large
+	return (3600) // Default is 1 hour which is just arbitrarily large
 }
 
 // Use this if you need to undo inflation from an older version. If the version is older than the version that fixed the issue,
 // you can cap their current resources with this.
-function fixOldSave(oldVersion){
+function fixOldSave(oldVersion) {
 }
