@@ -226,7 +226,6 @@ function doReset(layer, force=false) {
 	player[layer].resetTime = 0
 
 	updateTemp()
-	updateTemp()
 }
 
 function resetRow(row) {
@@ -422,11 +421,11 @@ var interval = setInterval(function() {
 		needCanvasUpdate = false;
 	}
 	tmp.scrolled = document.getElementById('treeTab') && document.getElementById('treeTab').scrollTop > 30
-	updateTemp();
 	updateOomps(diff);
 	updateWidth()
-	updateTabFormats()
 	gameLoop(diff)
+	updateTemp();
+	updateTabFormats()
 	fixNaNs()
 	adjustPopupTime(trueDiff)
 	updateParticles(trueDiff)
