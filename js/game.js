@@ -430,7 +430,9 @@ var interval = setInterval(function() {
 	fixNaNs()
 	adjustPopupTime(trueDiff)
 	updateParticles(trueDiff)
-	ticking = false
+	Vue.nextTick(function() {
+		ticking = false
+	})
 }, 50)
 
 setInterval(function() {needCanvasUpdate = true}, 500)
