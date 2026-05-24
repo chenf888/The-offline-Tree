@@ -215,6 +215,12 @@ function load() {
 	updateTemp();
 	updateTemp();
 	updateTabFormats()
+
+	if (options.offlineProd && player.offTime !== undefined && player.offTime.remain > 0) {
+		processOfflineTime();
+		updateTabFormats()
+	}
+
 	loadVue();
 }
 

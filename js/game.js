@@ -396,6 +396,25 @@ function hardReset(resetOptions) {
 	window.location.reload();
 }
 
+function processOfflineTime() {
+	if (player.offTime.remain > modInfo.offlineLimit * 3600)
+		player.offTime.remain = modInfo.offlineLimit * 3600
+
+	let maxTicks = 100
+	while (player.offTime.remain > 0 && maxTicks-- > 0) {
+		let chunk = Math.max(player.offTime.remain / 10, 0.05)
+		chunk = Math.min(chunk, player.offTime.remain)
+		if (maxTickLength) {
+			let limit = maxTickLength()
+			if (chunk > limit) chunk = limit
+		}
+		player.offTime.remain -= chunk
+		gameLoop(chunk)
+		updateTemp()
+	}
+	player.offTime = undefined
+}
+
 var ticking = false
 
 var interval = setInterval(function() {
@@ -405,16 +424,6 @@ var interval = setInterval(function() {
 	ticking = true
 	let now = Date.now()
 	let diff = (now - player.time) / 1e3
-	let trueDiff = diff
-	if (player.offTime !== undefined) {
-		if (player.offTime.remain > modInfo.offlineLimit * 3600) player.offTime.remain = modInfo.offlineLimit * 3600
-		if (player.offTime.remain > 0) {
-			let offlineDiff = Math.max(player.offTime.remain / 10, diff)
-			player.offTime.remain -= offlineDiff
-			diff += offlineDiff
-		}
-		if (!options.offlineProd || player.offTime.remain <= 0) player.offTime = undefined
-	}
 	if (player.devSpeed) diff *= player.devSpeed
 	player.time = now
 	if (needCanvasUpdate){ resizeCanvas();
@@ -427,8 +436,8 @@ var interval = setInterval(function() {
 	updateTemp();
 	updateTabFormats()
 	fixNaNs()
-	adjustPopupTime(trueDiff)
-	updateParticles(trueDiff)
+	adjustPopupTime(diff)
+	updateParticles(diff)
 	Vue.nextTick(function() {
 		ticking = false
 	})
