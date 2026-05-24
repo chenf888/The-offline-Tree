@@ -192,9 +192,9 @@ function loadVue() {
 		template: `
 		<div v-if="tmp[layer].milestones">
 			<table>
-				<tr v-for="id in (data === undefined ? Object.keys(tmp[layer].milestones) : data)" v-if="tmp[layer].milestones[id]!== undefined && tmp[layer].milestones[id].unlocked && milestoneShown(layer, id)">
+				<template v-for="id in (data === undefined ? Object.keys(tmp[layer].milestones) : data)"><tr v-if="tmp[layer].milestones[id]!== undefined && tmp[layer].milestones[id].unlocked && milestoneShown(layer, id)">
 					<milestone :layer = "layer" :data = "id" v-bind:style="tmp[layer].componentStyles.milestone"></milestone>
-				</tr>
+				</tr></template>
 			</table>
 			<br>
 		</div>
@@ -210,7 +210,7 @@ function loadVue() {
 			<span v-html="run(layers[layer].milestones[data].effectDescription, layers[layer].milestones[data])"></span><br>
 			<tooltip v-if="tmp[layer].milestones[data].tooltip" :text="tmp[layer].milestones[data].tooltip"></tooltip>
 
-		<span v-if="(tmp[layer].milestones[data].toggles)&&(hasMilestone(layer, data))" v-for="toggle in tmp[layer].milestones[data].toggles"><toggle :layer= "layer" :data= "toggle" v-bind:style="tmp[layer].componentStyles.toggle"></toggle>&nbsp;</span></td></tr>
+		<template v-for="toggle in tmp[layer].milestones[data].toggles"><span v-if="(tmp[layer].milestones[data].toggles)&&(hasMilestone(layer, data))"><toggle :layer= "layer" :data= "toggle" v-bind:style="tmp[layer].componentStyles.toggle"></toggle>&nbsp;</span></template></td></tr>
 		`
 	})
 
@@ -303,6 +303,9 @@ function loadVue() {
 			  	this.time = 0
 			}
 		},
+		beforeDestroy() {
+			this.stop()
+		},
 	})
 
 	Vue.component('respec-button', {
@@ -364,6 +367,9 @@ function loadVue() {
 			  	this.time = 0
 			}
 		},
+		beforeDestroy() {
+			this.stop()
+		},
 	})
 
 	Vue.component('master-button', {
@@ -424,6 +430,9 @@ function loadVue() {
 				this.interval = false
 			  	this.time = 0
 			}
+		},
+		beforeDestroy() {
+			this.stop()
 		},
 	})
 
