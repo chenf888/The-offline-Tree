@@ -13,11 +13,14 @@ let modInfo = {
 
 // Set your version in num and name
 let VERSION = {
-	num: "0.1.1",
+	num: "0.1.2",
 	name: "离线树",
 }
 
 let changelog = `<h1>更新日志</h1><br>
+    <h3>v0.1.2</h3><br>
+	    一次ui尝试<br>
+        通过在设置界面的glass ui选项控制开关<br>
     <h3>v0.1.1</h3><br>
         更改了离线点数计算方式<br>
 	<h3>v0.1</h3><br>

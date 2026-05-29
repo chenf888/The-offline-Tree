@@ -15,9 +15,11 @@ var systemComponents = {
 	'tree-node': {
 		props: ['layer', 'abb', 'size', 'prev'],
 		template: `
-		<button v-if="nodeShown(layer)"
+			<button v-if="nodeShown(layer)"
 			v-bind:id="layer"
-			v-on:click="function() {
+				v-on:mousemove="function(e){ updateNodeRefraction(e, layer) }"
+				v-on:mouseleave="function(){ resetNodeRefraction(layer) }"
+				v-on:click="function() {
 				if (shiftDown && options.forceTooltips) player[layer].forceTooltip = !player[layer].forceTooltip
 				else if(tmp[layer].isLayer) {
 					if (tmp[layer].leftTab) {
@@ -67,7 +69,8 @@ var systemComponents = {
 	'layer-tab': {
 		props: ['layer', 'back', 'spacing', 'embedded'],
 		template: `<div v-bind:style="[tmp[layer].style ? tmp[layer].style : {}, (tmp[layer].tabFormat && !Array.isArray(tmp[layer].tabFormat)) ? tmp[layer].tabFormat[player.subtabs[layer].mainTabs].style : {}]" class="noBackground">
-		<div v-if="back"><button v-bind:class="back == 'big' ? 'other-back' : 'back'" v-on:click="goBack(layer)">←</button></div>
+		<div v-if="back"></div>
+			<button v-if="back" class="back" aria-label="Back" title="Back" v-on:click="function(){ goBack(layer) }"></button>
 		<div v-if="!tmp[layer].tabFormat">
 			<div v-if="spacing" v-bind:style="{'height': spacing}" :key="this.$vnode.key + '-spacing'"></div>
 			<infobox v-if="tmp[layer].infoboxes" :layer="layer" :data="Object.keys(tmp[layer].infoboxes)[0]":key="this.$vnode.key + '-info'"></infobox>
@@ -173,6 +176,7 @@ var systemComponents = {
 				</tr> 
 			<tr>
                 <td><button class="opt" onclick="toggleOpt('hideMilestonePopups')">Show Milestone Popups: {{ formatOption(!options.hideMilestonePopups) }}</button></td>
+				<td><button class="opt" onclick="toggleGlassUI()">Glass UI: {{ options.glassUi?'ON':'OFF' }}</button></td>
             </tr>
         </table>`
     },

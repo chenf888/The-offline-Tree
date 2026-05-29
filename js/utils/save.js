@@ -208,6 +208,7 @@ function load() {
 	versionCheck();
 	changeTheme();
 	changeTreeQuality();
+	applyGlassUI();
 	updateLayers();
 	setupModInfo();
 

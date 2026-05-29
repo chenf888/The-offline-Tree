@@ -133,6 +133,50 @@ function updateMouse(event) {
     mouseY = event.clientY
 }
 
+// Smooth, rAF-driven node refraction targets
+const nodeRefractionTargets = {}
+const nodeRefractionSmoothing = 0.12
+let nodeRefractionRAF = null
+
+function updateNodeRefraction(event, layer) {
+    try {
+        const rect = document.getElementById(layer)?.getBoundingClientRect()
+        if (!rect) return
+        const x = ((event.clientX - rect.left) / rect.width) * 100
+        const y = ((event.clientY - rect.top) / rect.height) * 100
+        nodeRefractionTargets[layer] = {tx: x, ty: y, ts: 1.06}
+        if (!nodeRefractionRAF) animateNodeRefractions()
+    } catch (e) {}
+}
+
+function resetNodeRefraction(layer) {
+    nodeRefractionTargets[layer] = {tx: 50, ty: 40, ts: 1}
+    if (!nodeRefractionRAF) animateNodeRefractions()
+}
+
+function animateNodeRefractions() {
+    nodeRefractionRAF = requestAnimationFrame(animateNodeRefractions)
+    for (let layer in nodeRefractionTargets) {
+        const target = nodeRefractionTargets[layer]
+        const el = document.getElementById(layer)
+        if (!el) { delete nodeRefractionTargets[layer]; continue }
+        let curMx = parseFloat(el.style.getPropertyValue('--node-mx')) || 50
+        let curMy = parseFloat(el.style.getPropertyValue('--node-my')) || 40
+        let curScale = parseFloat(el.style.getPropertyValue('--node-scale')) || 1
+        const k = nodeRefractionSmoothing
+        const nx = curMx + (target.tx - curMx) * k
+        const ny = curMy + (target.ty - curMy) * k
+        const ns = curScale + (target.ts - curScale) * k
+        el.style.setProperty('--node-mx', nx + '%')
+        el.style.setProperty('--node-my', ny + '%')
+        el.style.setProperty('--node-scale', ns)
+        if (Math.abs(nx - target.tx) < 0.05 && Math.abs(ny - target.ty) < 0.05 && Math.abs(ns - target.ts) < 0.002) {
+            if (target.ts === 1 && Math.abs(target.tx - 50) < 0.05 && Math.abs(target.ty - 40) < 0.05) delete nodeRefractionTargets[layer]
+        }
+    }
+    if (Object.keys(nodeRefractionTargets).length === 0) { cancelAnimationFrame(nodeRefractionRAF); nodeRefractionRAF = null }
+}
+
 function getOpacity(particle) {
     if ((particle.time < particle.fadeOutTime) && particle.fadeOutTime)
         return particle.time / particle.fadeOutTime

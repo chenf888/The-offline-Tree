@@ -656,6 +656,7 @@ function loadVue() {
 			challengeButtonText,
 			constructBarStyle,
 			constructParticleStyle,
+			toggleGlassUI,
 			VERSION,
 			LAYERS,
 			hotkeys,

@@ -49,3 +49,17 @@ function switchTheme() {
 	changeTheme();
 	resizeCanvas();
 }
+
+// ************ Glass UI Toggle ************
+function toggleGlassUI() {
+	options.glassUi = !options.glassUi;
+	applyGlassUI();
+}
+
+function applyGlassUI() {
+	if (options.glassUi) {
+		document.body.classList.add('glass-ui');
+	} else {
+		document.body.classList.remove('glass-ui');
+	}
+}
