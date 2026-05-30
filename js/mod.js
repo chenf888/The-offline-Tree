@@ -13,7 +13,7 @@ let modInfo = {
 
 // Set your version in num and name
 let VERSION = {
-	num: "0.1.2",
+	num: "0.1.3",
 	name: "离线树",
 }
 
@@ -21,7 +21,7 @@ let changelog = `<h1>更新日志</h1><br>
     <h3>v0.1.3</h3><br>
 	    优化部分glassui动画<br>
 	    增加了离线时间显示弹窗，初始离线容量改为1小时<br>
-	    目前升级效果并未同步更改，所有稍麻烦一点<br>
+	    目前升级效果并未同步更改，所以稍麻烦一点<br>
     <h3>v0.1.2</h3><br>
 	    一次ui尝试<br>
         通过在设置界面的glass ui选项控制开关<br>
