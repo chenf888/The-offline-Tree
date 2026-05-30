@@ -397,8 +397,9 @@ function hardReset(resetOptions) {
 }
 
 function processOfflineTime() {
-	if (player.offTime.remain > modInfo.offlineLimit * 3600)
-		player.offTime.remain = modInfo.offlineLimit * 3600
+	let limit = getOfflineLimit ? getOfflineLimit() : modInfo.offlineLimit
+	if (player.offTime.remain > limit * 3600)
+		player.offTime.remain = limit * 3600
 
 	let maxTicks = 100
 	while (player.offTime.remain > 0 && maxTicks-- > 0) {

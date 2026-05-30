@@ -154,22 +154,21 @@ function showTab(name, prev) {
 	updateTabFormats()
 	needCanvasUpdate = true
 	document.activeElement.blur()
+	activePopups.length = 0
 
 }
 
 function showNavTab(name, prev) {
-	console.log(prev)
 	if (LAYERS.includes(name) && !layerunlocked(name)) return
 	if (player.navTab !== name) clearParticles(function(p) {return p.layer === player.navTab})
 	if (tmp[name] && tmp[name].previousTab !== undefined) prev = tmp[name].previousTab
-	var toTreeTab = name == "tree-tab"
-	console.log(name + prev)
 	if (name!== "none" && prev && !tmp[prev]?.leftTab == !tmp[name]?.leftTab) player[name].prevTab = prev
 	else if (player[name])
 		player[name].prevTab = ""
 	player.navTab = name
 	updateTabFormats()
 	needCanvasUpdate = true
+	activePopups.length = 0
 }
 
 

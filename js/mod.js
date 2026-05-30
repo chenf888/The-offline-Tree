@@ -8,7 +8,7 @@ let modInfo = {
 	discordName: "",
 	discordLink: "",
 	initialStartPoints: new Decimal(0), // Used for hard resets and new players
-	offlineLimit: 24,  // In hours
+	offlineLimit: 1,  // In hours (base), can be upgraded
 }
 
 // Set your version in num and name
@@ -18,6 +18,10 @@ let VERSION = {
 }
 
 let changelog = `<h1>更新日志</h1><br>
+    <h3>v0.1.3</h3><br>
+	    优化部分glassui动画<br>
+	    增加了离线时间显示弹窗，初始离线容量改为1小时<br>
+	    目前升级效果并未同步更改，所有稍麻烦一点<br>
     <h3>v0.1.2</h3><br>
 	    一次ui尝试<br>
         通过在设置界面的glass ui选项控制开关<br>
@@ -54,13 +58,23 @@ function getPointGen() {
 	if (hasUpgrade("o", 12)) gain = gain.times(upgradeEffect("o", 12))
 	if (hasUpgrade("o", 13)) gain = gain.times(upgradeEffect("o", 13))
 	if (hasUpgrade("o", 22)) gain = gain.times(upgradeEffect("o", 22))
+	if (hasUpgrade("o", 34)) gain = gain.times(upgradeEffect("o", 34))
 	return gain
 }
 
 // You can add non-layer related variables that should to into "player" and be saved here, along with default values
 function addedPlayerData() {
 	return {
+		offlineMax: 1,  // Current max offline hours
 	}
+}
+
+function getOfflineLimit() {
+	let limit = player.offlineMax || modInfo.offlineLimit
+	if (hasUpgrade("o", 24)) limit += 2
+	if (hasUpgrade("o", 32)) limit += 4
+	if (hasUpgrade("o", 33)) limit += 6
+	return limit
 }
 
 // Display extra things at the top of the page

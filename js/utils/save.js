@@ -218,8 +218,30 @@ function load() {
 	updateTabFormats()
 
 	if (options.offlineProd && player.offTime !== undefined && player.offTime.remain > 0) {
+		let totalOffSec = player.offTime.remain
+		let ptsBefore = new Decimal(player.points)
 		processOfflineTime();
 		updateTabFormats()
+		let ptsGained = player.points.sub(ptsBefore)
+
+		// Defer popup until after Vue mount to avoid stutter
+		let now = new Date()
+		let leaveTime = new Date(now.getTime() - totalOffSec * 1000)
+		let leaveStr = leaveTime.getFullYear() + '年' + (leaveTime.getMonth()+1) + '月' + leaveTime.getDate() + '日' + leaveTime.getHours() + '时' + leaveTime.getMinutes() + '分'
+		let totalMin = Math.floor(totalOffSec / 60)
+		let effHours = Math.floor(totalOffSec / 3600)
+		let effMins = Math.floor((totalOffSec % 3600) / 60)
+		let avgPerMin = totalMin > 0 ? format(ptsGained.div(totalMin)) : '0'
+
+		let popupText = '你从' + leaveStr + '起离开了游戏<br>'
+		popupText += '你此次离线时间为 ' + totalMin + ' 分<br>'
+		popupText += '有效离线时间为 ' + effHours + '时' + effMins + '分<br>'
+		popupText += '当前平均获得 ' + avgPerMin + ' 离线点数/分'
+		let popupColor = tmp["o"] ? tmp["o"].color : "#4B8DF5"
+
+		setTimeout(function() {
+			doPopup("default", popupText, "欢迎回来！", 8, popupColor)
+		}, 100)
 	}
 
 	loadVue();

@@ -115,7 +115,7 @@ body.glass-ui #treeTab .noBackground {
    ============================================================ */
 body.glass-ui .treeNode {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   --node-mx: 50%;
   --node-my: 40%;
   --node-scale: 1;
@@ -141,7 +141,7 @@ body.glass-ui .treeNode {
 /* Liquid refraction bubble — organic depth */
 body.glass-ui .treeNode::before {
   content: '';
-  position: absolute; inset: -30%;
+  position: absolute; inset: -8px;
   background:
     radial-gradient(circle at var(--node-mx,50%) var(--node-my,40%), rgba(255,255,255,0.08) 0%, transparent 55%),
     radial-gradient(circle at 60% 60%, rgba(0,229,255,0.05) 0%, transparent 40%);
@@ -581,23 +581,24 @@ body.glass-ui .milestone-popup {
    TOOLTIP
    ============================================================ */
 body.glass-ui .tooltip {
-  background: rgba(12,18,32,0.94) !important;
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-  border: 1px solid rgba(255,255,255,0.09) !important;
+  background: rgba(8,14,28,0.72) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,0.06) !important;
   border-radius: var(--r-sm) !important;
   box-shadow:
     0 10px 36px rgba(0,0,0,0.65),
     0 0 30px rgba(0,229,255,0.04) !important;
   color: var(--t-primary) !important;
-  animation: tooltipEnter 0.2s var(--ease-out-expo) both;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-out-expo) !important;
 }
-@keyframes tooltipEnter {
-  from { opacity:0; transform: translateX(-50%) translateY(6px); }
-  to   { opacity:1; transform: translateX(-50%) translateY(0); }
+body.glass-ui .tooltipBox:hover .tooltip,
+body.glass-ui .forceTooltip .tooltip {
+  opacity: 1;
 }
 body.glass-ui .tooltip::after {
-  border-color: rgba(12,18,32,0.94) transparent transparent transparent !important;
+  border-color: rgba(8,14,28,0.72) transparent transparent transparent !important;
 }
 
 /* ============================================================
@@ -738,4 +739,50 @@ body.glass-ui ::selection {
 @keyframes tabEnterMobile {
   from { opacity:0; transform: translateY(20px) scale(0.97); }
   to   { opacity:1; transform: translateY(0) scale(1); }
+}
+
+/* ============================================================
+   ACHIEVEMENT CARDS & POPUP
+   ============================================================ */
+body.glass-ui .achievement-popup,
+body.glass-ui .default-popup,
+body.glass-ui .milestone-popup {
+  background: rgba(12,20,38,0.85) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0,229,255,0.2) !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: var(--g-shadow-lg), 0 0 24px rgba(0,229,255,0.08) !important;
+  color: var(--t-primary) !important;
+  padding: 20px !important;
+}
+body.glass-ui .popup h3 {
+  color: var(--n-cyan) !important;
+  text-shadow: 0 0 12px rgba(0,229,255,0.3);
+}
+body.glass-ui .popup h2 {
+  color: var(--t-primary) !important;
+  font-size: 15px !important;
+  line-height: 1.7 !important;
+}
+
+/* Side layer nodes */
+body.glass-ui .sideLayers .treeNode,
+body.glass-ui .sideLayers .treeButton {
+  backdrop-filter: blur(var(--g-blur));
+  -webkit-backdrop-filter: blur(var(--g-blur));
+  border: 1.5px solid var(--g-border) !important;
+  box-shadow: var(--g-shadow-md), 0 0 15px rgba(0,229,255,0.04) !important;
+}
+
+/* A node smaller, O node bigger in glass UI */
+body.glass-ui .treeNode.o {
+  height: 110px !important;
+  width: 110px !important;
+  font-size: 44px !important;
+}
+body.glass-ui .treeNode.a {
+  height: 60px !important;
+  width: 60px !important;
+  font-size: 24px !important;
 }
