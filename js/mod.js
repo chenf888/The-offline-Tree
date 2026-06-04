@@ -1,7 +1,7 @@
 let modInfo = {
-	name: "离线树",
+	name: "在/离线树",
 	author: "陈风就是浪",
-	id: "The-offline-Tree",
+	id: "The-on-or-offline-Tree",
 	pointsName: "离线点数",
 	modFiles: ["layers.js", "tree.js"],
 
@@ -13,11 +13,17 @@ let modInfo = {
 
 // Set your version in num and name
 let VERSION = {
-	num: "0.1.3",
-	name: "离线树",
+	num: "0.2.0",
+	name: "在/离线树",
 }
 
 let changelog = `<h1>更新日志</h1><br>
+    <h3>v0.2.0</h3><br>
+	    离线树进入新时代，更名为在/离线树。游戏链接展示不变，点击<a href="https://qm.qq.com/q/Ae8KXBQ4HS" target="_blank" style="color:#2196F3;text-decoration:underline">这里</a>加入QQ群<br>
+		主要玩法准备由单纯的离线变为以小游戏为主的在/离线结合<br>
+		这种玩法的灵感来源于1001tree，虽然目前还没有什么实质性的内容，但后续会慢慢添加<br>
+		当前在线点数获取为1/h，每秒约为0.0002778/s，这个数字只是巧合<br>
+        现在只有一个小游戏，由于是赶出来的，所有体验较差，数值部分还未平衡<br>
     <h3>v0.1.3</h3><br>
 	    优化部分glassui动画<br>
 	    增加了离线时间显示弹窗，初始离线容量改为1小时<br>
@@ -36,20 +42,18 @@ let winText = `Congratulations! You have reached the end and beaten this game, b
 
 // If you add new functions anywhere inside of a layer, and those functions have an effect when called, add them here.
 // (The ones here are examples, all official functions are already taken care of)
-var doNotCallTheseFunctionsEveryTick = ["blowUpEverything"]
+var doNotCallTheseFunctionsEveryTick = ["blowUpEverything", "_doStockTick", "getCapital", "getTotalAsset", "getProfit", "getStockFee", "buyStock", "sellStock", "drawCandleChart"]
 
 function getStartPoints() {
 	return new Decimal(modInfo.initialStartPoints)
 }
 
 // Determines if it should show points/sec
-// 离线树：只在处理离线时间时产生点数，在线时不增长
 function canGenPoints() {
 	return player.offTime !== undefined && player.offTime.remain > 0
 }
 
 // Calculate points/sec!
-// 离线树：每分钟获得1离线点数 = 每秒 1/60 点
 function getPointGen() {
 	if (!canGenPoints())
 		return new Decimal(0)

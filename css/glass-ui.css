@@ -732,6 +732,9 @@ body.glass-ui ::selection {
   body.glass-ui .buyable { height:150px;width:150px; }
   body.glass-ui .challenge { width:240px;height:240px; }
   body.glass-ui .treeNode { height:70px;width:70px;font-size:28px !important; }
+  body.glass-ui .treeNode.o { height:70px !important; width:70px !important; font-size:28px !important; }
+  body.glass-ui .treeNode.on { height:70px !important; width:70px !important; font-size:28px !important; }
+  body.glass-ui .treeNode.a { height:50px !important; width:50px !important; font-size:20px !important; }
   body.glass-ui .noBackground {
     animation: tabEnterMobile 0.4s var(--ease-out-expo) both;
   }
@@ -777,6 +780,11 @@ body.glass-ui .sideLayers .treeButton {
 
 /* A node smaller, O node bigger in glass UI */
 body.glass-ui .treeNode.o {
+  height: 110px !important;
+  width: 110px !important;
+  font-size: 44px !important;
+}
+body.glass-ui .treeNode.on {
   height: 110px !important;
   width: 110px !important;
   font-size: 44px !important;
