@@ -16,7 +16,7 @@ addLayer("o", {
     type: "normal",
     exponent: 1,
     gainMult() {
-        mult = new Decimal(1)
+        let mult = new Decimal(1)
         if (hasUpgrade(this.layer, 11)) mult = mult.times(upgradeEffect(this.layer, 11))
         if (hasUpgrade(this.layer, 21)) mult = mult.times(upgradeEffect(this.layer, 21))
         if (hasUpgrade(this.layer, 31)) mult = mult.times(upgradeEffect(this.layer, 31))
@@ -381,26 +381,25 @@ function getStockDefs() {
 function drawCandleChart(code) {
     let p = player.stock, chart = p.charts[code]
     if (!chart || chart.length === 0) return '<span style="color:#888">等待行情数据...</span>'
-    let show = chart.slice(-30)
+    let show = chart.slice(-16)
     let maxV = 0, minV = Infinity
     for (let c of show) { maxV = Math.max(maxV, c.high); minV = Math.min(minV, c.low) }
     if (maxV === minV) maxV = minV + 1
-    let scale = 80 / (maxV - minV)
-    let html = '<div style="position:relative;height:90px;width:100%;overflow:hidden">'
-    html += '<svg style="position:absolute;width:100%;height:80px" xmlns="http://www.w3.org/2000/svg">'
+    let scale = 50 / (maxV - minV)
+    let html = '<svg width="100%" height="56" xmlns="http://www.w3.org/2000/svg">'
     for (let i = 0; i < show.length; i++) {
         let c = show[i]
-        let x = i * (100 / show.length) + 1
+        let x = i * 6 + 3
         let isUp = c.close >= c.open
         let color = isUp ? "#4CAF50" : "#F44336"
-        let openY = 80 - (c.open - minV) * scale
-        let closeY = 80 - (c.close - minV) * scale
-        let highY = 80 - (c.high - minV) * scale
-        let lowY = 80 - (c.low - minV) * scale
+        let openY = 52 - (c.open - minV) * scale
+        let closeY = 52 - (c.close - minV) * scale
+        let highY = 52 - (c.high - minV) * scale
+        let lowY = 52 - (c.low - minV) * scale
         html += '<line x1="' + x + '" y1="' + highY + '" x2="' + x + '" y2="' + lowY + '" stroke="' + color + '" stroke-width="1"/>'
-        html += '<rect x="' + (x - 1.5) + '" y="' + Math.min(openY, closeY) + '" width="3" height="' + Math.max(1, Math.abs(openY - closeY)) + '" fill="' + color + '"/>'
+        html += '<rect x="' + (x - 2) + '" y="' + Math.min(openY, closeY) + '" width="3" height="' + Math.max(1, Math.abs(openY - closeY)) + '" fill="' + color + '"/>'
     }
-    html += '</svg></div>'
+    html += '</svg>'
     return html
 }
 
@@ -412,24 +411,49 @@ function getStockFee() {
     return fee
 }
 
-function buyStock(code) {
+function buyStock(code, qty) {
     let p = player.stock, fee = getStockFee()
-    let price = p.prices[code], cost = price.times(1 + fee)
+    qty = qty || 1
+    let price = p.prices[code], cost = price.times(1 + fee).times(qty)
     if (p.capital.lt(cost)) return
     p.capital = p.capital.sub(cost)
     let oldH = p.holdings[code], oldAvg = p.avgPrices[code]
-    let totalCost = oldAvg.times(oldH).add(price)
-    p.holdings[code] = oldH.add(1)
+    let totalCost = oldAvg.times(oldH).add(price.times(qty))
+    p.holdings[code] = oldH.add(qty)
     p.avgPrices[code] = totalCost.div(p.holdings[code])
+    p.totalTrades = (p.totalTrades || 0) + 1
 }
 
-function sellStock(code) {
+function sellStock(code, qty) {
     let p = player.stock, fee = getStockFee()
-    let price = p.prices[code], income = price.times(1 - fee)
-    if (p.holdings[code].lt(1)) return
+    qty = qty || 1
+    let price = p.prices[code], income = price.times(1 - fee).times(qty)
+    if (p.holdings[code].lt(qty)) return
     p.capital = p.capital.add(income)
-    p.holdings[code] = p.holdings[code].sub(1)
+    p.holdings[code] = p.holdings[code].sub(qty)
     if (p.holdings[code].lte(0)) p.avgPrices[code] = new Decimal(0)
+    p.totalTrades = (p.totalTrades || 0) + 1
+}
+
+function checkStockUnlock() {
+    let p = player.stock, asset = layers.stock.getTotalAsset()
+    if (p._stockVersion !== 2) {
+        p.unlockedStocks = { G001: true, G002: false, G003: false, G004: false, G005: false }
+        p._stockVersion = 2
+        p._unlockNotified = {}
+    }
+    if (!p.unlockedStocks) {
+        p.unlockedStocks = { G001: true, G002: false, G003: false, G004: false, G005: false }
+    }
+    if (!p._unlockNotified) p._unlockNotified = {}
+    let thresholds = { G002: 1000, G003: 5000, G004: 25000, G005: 100000 }
+    let names = { G002: "凌云数字科技", G003: "瀚海生物医药", G004: "天域半导体科技", G005: "寰宇矿业集团" }
+    for (let code in thresholds) {
+        if (!p.unlockedStocks[code] && asset.gte(thresholds[code])) {
+            p.unlockedStocks[code] = true
+            if (!p._unlockNotified[code]) { p._unlockNotified[code] = true; p.events.unshift("🔓 解锁" + names[code] + "！") }
+        }
+    }
 }
 
 addLayer("stock", {
@@ -441,6 +465,13 @@ addLayer("stock", {
             unlocked: false,
             points: new Decimal(0),
             capital: new Decimal(250),
+            batchSize: 1,
+            unlockedStocks: { G001: true, G002: false, G003: false, G004: false, G005: false },
+            _stockVersion: 2,
+            totalTrades: 0,
+            stopLoss: -1,
+            takeProfit: -1,
+            eventPreview: null,
             holdings: { G001: new Decimal(0), G002: new Decimal(0), G003: new Decimal(0), G004: new Decimal(0), G005: new Decimal(0) },
             avgPrices: { G001: new Decimal(0), G002: new Decimal(0), G003: new Decimal(0), G004: new Decimal(0), G005: new Decimal(0) },
             prices: { G001: new Decimal(20), G002: new Decimal(8), G003: new Decimal(5), G004: new Decimal(15), G005: new Decimal(3) },
@@ -457,7 +488,7 @@ addLayer("stock", {
         }
     },
     color: "#00BFA5",
-    resource: "股票",
+    resource: "资金",
     type: "none",
     row: 2,
 
@@ -477,6 +508,28 @@ addLayer("stock", {
             p._tickAccum -= tickMs
             this._doStockTick(p)
             updated = true
+        }
+        checkStockUnlock()
+        if (hasUpgrade("stock", 21) && (p.stopLoss > 0 || p.takeProfit > 0)) {
+            for (let code in p.holdings) {
+                let h = p.holdings[code], price = p.prices[code], avg = p.avgPrices[code]
+                if (h.lte(0) || avg.lte(0)) continue
+                let pct = price.sub(avg).div(avg).times(100).toNumber()
+                if (p.stopLoss > 0 && pct <= -p.stopLoss) { sellStock(code, h.toNumber()) }
+                else if (p.takeProfit > 0 && pct >= p.takeProfit) { sellStock(code, h.toNumber()) }
+            }
+        }
+    },
+
+    automate() {
+        let p = player.stock
+        if (!p || !p.unlocked) return
+        if (hasMilestone("stock", 4)) {
+            for (let code in p.unlockedStocks) {
+                if (!p.unlockedStocks[code]) continue
+                let price = p.prices[code], bs = p.batchSize || 1, fee = getStockFee()
+                if (p.capital.gte(price.times(1 + fee).times(bs))) { buyStock(code, bs); break }
+            }
         }
     },
 
@@ -608,8 +661,22 @@ addLayer("stock", {
             if (eventName) {
                 let dir = eventEffect > 0 ? "📈" : "📉"
                 let pct = (Math.abs(eventEffect) * 100).toFixed(1)
-                p.events.unshift(dir + " [" + d.name + "] " + eventName + " " + (eventEffect >= 0 ? "+" : "") + pct + "%")
-                if (p.events.length > 20) p.events.pop()
+                let msg = dir + " [" + d.name + "] " + eventName + " " + (eventEffect >= 0 ? "+" : "") + pct + "%"
+                if (hasUpgrade("stock", 12)) {
+                    p.eventPreview = { msg: msg, code: code, ticks: 6 }
+                } else {
+                    p.events.unshift(msg)
+                    if (p.events.length > 20) p.events.pop()
+                }
+            }
+            // 推送预告到期的事件
+            if (p.eventPreview) {
+                p.eventPreview.ticks--
+                if (p.eventPreview.ticks <= 0) {
+                    p.events.unshift("⏰ " + p.eventPreview.msg)
+                    if (p.events.length > 20) p.events.pop()
+                    p.eventPreview = null
+                }
             }
         }
     },
@@ -637,46 +704,97 @@ addLayer("stock", {
             content: [
                 ["display-text", function () {
                     let p = player.stock
-                    if (!p || !p.unlocked) return '<div style="text-align:center;padding:40px;color:#aaa">请先在在线层解锁股票大亨</div>'
+                    if (!p || !p.unlocked) return '<div style="text-align:center;padding:50px 20px;color:#8899AA;font-size:14px">🔒 请先在「在线」层解锁股票大亨</div>'
                     let capital = format(p.capital)
                     let totalAsset = format(layers.stock.getTotalAsset())
                     let profit = layers.stock.getProfit()
-                    let profitColor = profit.gte(0) ? "#4CAF50" : "#F44336"
-                    let profitSign = profit.gte(0) ? "+" : ""
-                    return '<div style="display:flex;justify-content:space-around;padding:8px 0;font-size:13px">' +
-                        '<span>💰 资金: <b>' + capital + '</b></span>' +
-                        '<span>📊 总资产: <b>' + totalAsset + '</b></span>' +
-                        '<span style="color:' + profitColor + '">📈 收益: <b>' + profitSign + format(profit) + '%</b></span>' +
+                    let pc = profit.gte(0) ? "#00E676" : "#FF5252"
+                    let ps = profit.gte(0) ? "+" : ""
+                    let bs = p.batchSize || 1
+                    let ulCount = 0, totalStocks = 5
+                    if (p.unlockedStocks) for (let c in p.unlockedStocks) if (p.unlockedStocks[c]) ulCount++
+                    let canBatch = hasMilestone("stock", 2)
+                    return '<div style="display:flex;gap:1px;background:rgba(255,255,255,0.04);border-radius:10px;overflow:hidden;margin:2px 0 8px">' +
+                        '<div style="flex:1;text-align:center;padding:8px 6px"><span style="font-size:9px;color:#667788">💰资金</span> <b style="font-size:14px;color:#DDD">' + capital + '</b></div>' +
+                        '<div style="flex:1;text-align:center;padding:8px 6px;border-left:1px solid rgba(255,255,255,0.04)"><span style="font-size:9px;color:#667788">📊总资产</span> <b style="font-size:14px;color:#DDD">' + totalAsset + '</b></div>' +
+                        '<div style="flex:1;text-align:center;padding:8px 6px;border-left:1px solid rgba(255,255,255,0.04)"><span style="font-size:9px;color:#667788">📈收益率</span> <b style="font-size:14px;color:' + pc + '">' + ps + format(profit) + '%</b></div>' +
+                        '<div style="flex:1;text-align:center;padding:8px 6px;border-left:1px solid rgba(255,255,255,0.04)"><span style="font-size:9px;color:#667788">🔓解锁</span> <b style="font-size:14px;color:#FFD54F">' + ulCount + '/' + totalStocks + '</b></div>' +
+                        (canBatch ? '<div style="flex:1;text-align:center;padding:8px 6px;border-left:1px solid rgba(255,255,255,0.04)"><span style="font-size:9px;color:#667788">📦批量</span> <b style="font-size:14px;color:#80CBC4">' + bs + '股/次</b></div>' : '') +
                         '</div>'
                 }],
                 ["display-text", function () {
                     let p = player.stock
                     if (!p || !p.unlocked) return ""
                     let defs = getStockDefs()
-                    let html = '<div style="font-size:12px">'
-                    html += '<table style="width:100%;border-collapse:collapse">'
-                    html += '<tr style="color:#aaa;font-size:10px"><th>代码</th><th>现价</th><th>涨跌</th><th>K线</th><th>操作</th></tr>'
-                    for (let code in defs) {
-                        let d = defs[code]
-                        let price = p.prices[code] || d.initPrice
-                        let prevClose = p.charts[code] && p.charts[code].length > 0 ? new Decimal(p.charts[code][p.charts[code].length - 1].open) : price
+                    let fee = getStockFee(), bs = p.batchSize || 1, hasK = hasUpgrade("stock", 11), hasTr = hasUpgrade("stock", 22)
+                    let codes = ["G001", "G002", "G003", "G004", "G005"]
+                    let thresholds = { G002: 1000, G003: 5000, G004: 25000, G005: 100000 }
+                    let names = { G002: "凌云数字科技", G003: "瀚海生物医药", G004: "天域半导体科技", G005: "寰宇矿业集团" }
+                    let nextCode = "", nextName = "", nextTh = 0
+                    for (let i = 0; i < codes.length; i++) {
+                        let c = codes[i]
+                        if (c === "G001") continue
+                        if (p.unlockedStocks && p.unlockedStocks[c]) continue
+                        nextCode = c; nextName = names[c]; nextTh = thresholds[c]; break
+                    }
+                    let allUnlocked = !nextCode
+                    let html = ''
+                    for (let idx = 0; idx < codes.length; idx++) {
+                        let code = codes[idx], d = defs[code]
+                        let isUnlocked = p.unlockedStocks && p.unlockedStocks[code]
+                        if (!isUnlocked) continue
+                        let price = p.prices[code] || new Decimal(d.initPrice)
+                        let chart = p.charts[code]
+                        let prevClose = chart && chart.length > 0 ? new Decimal(chart[chart.length - 1].open) : price
                         let change = price.sub(prevClose)
                         let changePct = prevClose.gt(0) ? change.div(prevClose).times(100) : new Decimal(0)
-                        let color = change.gte(0) ? "#4CAF50" : "#F44336"
-                        let arrow = change.gte(0) ? "▲" : "▼"
-                        let holdings = p.holdings[code] || new Decimal(0)
-                        html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.06)">'
-                        html += '<td style="padding:4px">' + d.icon + '<br><small>' + d.name + '</small></td>'
-                        html += '<td style="padding:4px;text-align:center"><b>' + format(price) + '</b></td>'
-                        html += '<td style="padding:4px;text-align:center;color:' + color + '">' + arrow + ' ' + format(changePct) + '%</td>'
-                        html += '<td style="padding:2px">' + drawCandleChart(code) + '</td>'
-                        html += '<td style="padding:4px;font-size:10px;text-align:center">持' + format(holdings, 0) + '股</td></tr>'
+                        let isUp = change.gte(0), accent = isUp ? "#00E676" : "#FF5252"
+                        let holdings = p.holdings[code] || new Decimal(0), mv = holdings.times(price)
+                        let canBuy = p.capital.gte(price.times(1 + fee).times(bs)), canSell = holdings.gte(bs)
+                        let buyLabel = bs > 1 ? ('买'+bs+'股') : '买入'
+                        let sellLabel = bs > 1 ? ('卖'+bs+'股') : '卖出'
+                        html += '<div style="background:linear-gradient(135deg,rgba(20,22,28,0.9),rgba(24,26,34,0.9));border:1px solid rgba(255,255,255,0.08);border-left:3px solid ' + accent + ';border-radius:10px;padding:12px 14px 10px;margin-bottom:8px">'
+                        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+                        html += '<div style="display:flex;align-items:center;gap:10px;min-width:0">'
+                        html += '<span style="font-size:26px;flex-shrink:0">' + d.icon + '</span>'
+                        html += '<div style="min-width:0"><div style="font-weight:700;font-size:13px;color:#E8E8E8">' + d.name + '</div>'
+                        html += '<span style="display:inline-block;font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,0.05);color:#8899AA;margin-top:2px">' + d.tag + '</span></div>'
+                        html += '</div>'
+                        html += '<div style="text-align:right;flex-shrink:0"><div style="font-size:18px;font-weight:800;color:#FFF;font-family:monospace">' + format(price) + '</div>'
+                        html += '<div style="font-size:12px;font-weight:600;color:' + accent + '">' + (isUp ? "▲" : "▼") + ' ' + format(changePct) + '%</div></div>'
+                        html += '</div>'
+                        if (hasTr) {
+                            let trendHtml = ''
+                            if (d.reversal === "cycle") {
+                                let dirTxt = p._cycleState && p._cycleState[code] === "bull" ? "🐂 牛市" : "🐻 熊市"
+                                trendHtml = '<span style="font-size:9px;color:#8899AA">📐 ' + dirTxt + '</span>'
+                            } else if (d.reversal === "extreme") {
+                                trendHtml = '<span style="font-size:9px;color:#8899AA">📐 随机游走</span>'
+                            } else {
+                                let t = d.trend
+                                trendHtml = '<span style="font-size:9px;color:#8899AA">📐 ' + (t > 0 ? '温和看涨' : t < -0.0001 ? '温和看跌' : '横盘') + '</span>'
+                            }
+                            html += '<div style="margin-bottom:4px">' + trendHtml + '</div>'
+                        }
+                        if (hasK) {
+                            html += '<div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:4px 6px;margin-bottom:6px;overflow:hidden">'
+                            html += drawCandleChart(code)
+                            html += '</div>'
+                        }
+                        html += '<div style="display:flex;align-items:center;gap:8px;font-size:10px">'
+                        html += '<span style="color:#667788;flex:1">📦持仓 <b style="color:#BBB">' + format(holdings, 0) + '</b>股 · 市值 <b style="color:#BBB">' + format(mv) + '</b></span>'
+                        html += '<button onclick="buyStock(\'' + code + '\',player.stock.batchSize)" style="border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;' + (canBuy ? 'background:#00E67633;color:#00E676;' : 'background:rgba(255,255,255,0.04);color:#555;cursor:default;') + '" ' + (canBuy ? '' : 'disabled') + '>' + buyLabel + '</button>'
+                        html += '<button onclick="sellStock(\'' + code + '\',player.stock.batchSize)" style="border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;' + (canSell ? 'background:#FF525233;color:#FF5252;' : 'background:rgba(255,255,255,0.04);color:#555;cursor:default;') + '" ' + (canSell ? '' : 'disabled') + '>' + sellLabel + '</button>'
+                        html += '</div></div>'
                     }
-                    html += '</table></div>'
+                    if (!allUnlocked) {
+                        let asset = layers.stock.getTotalAsset()
+                        let remain = new Decimal(nextTh).sub(asset).max(0)
+                        html += '<div style="background:rgba(255,213,79,0.04);border:1px solid rgba(255,213,79,0.10);border-radius:8px;padding:10px 14px;margin-top:4px;text-align:center;font-size:11px;color:#FFD54F">'
+                        html += '🔒 下一只股票: <b>' + nextName + '</b> · 需要总资产 <b>' + format(nextTh) + '</b> · 还差 <b>' + format(remain) + '</b></div>'
+                    }
                     return html
                 }],
-                "blank",
-                "clickables",
             ]
         },
         "持仓": {
@@ -686,50 +804,79 @@ addLayer("stock", {
                     if (!p || !p.unlocked) return ""
                     let capital = format(p.capital)
                     let totalAsset = format(layers.stock.getTotalAsset())
-                    return '<div style="padding:8px;font-size:13px">💰 资金: <b>' + capital + '</b> | 📊 总资产: <b>' + totalAsset + '</b></div>'
+                    let profit = layers.stock.getProfit()
+                    let pc = profit.gte(0) ? "#00E676" : "#FF5252"
+                    let ps = profit.gte(0) ? "+" : ""
+                    let bs = p.batchSize || 1
+                    let canBatch = hasMilestone("stock", 2)
+                    let html = '<div style="display:flex;gap:1px;background:rgba(255,255,255,0.04);border-radius:10px;overflow:hidden;margin:2px 0 10px">'
+                    html += '<div style="flex:1;text-align:center;padding:8px 6px"><span style="font-size:9px;color:#667788">💰资金</span> <b style="font-size:14px;color:#DDD">' + capital + '</b></div>'
+                    html += '<div style="flex:1;text-align:center;padding:8px 6px;border-left:1px solid rgba(255,255,255,0.04)"><span style="font-size:9px;color:#667788">📊总资产</span> <b style="font-size:14px;color:#DDD">' + totalAsset + '</b></div>'
+                    html += '<div style="flex:1;text-align:center;padding:8px 6px;border-left:1px solid rgba(255,255,255,0.04)"><span style="font-size:9px;color:#667788">📈总收益</span> <b style="font-size:14px;color:' + pc + '">' + ps + format(profit) + '%</b></div>'
+                    if (canBatch) {
+                        html += '<div style="flex:1.4;display:flex;align-items:center;justify-content:center;gap:6px;padding:4px 6px;border-left:1px solid rgba(255,255,255,0.04)">'
+                        html += '<span style="font-size:9px;color:#667788;flex-shrink:0">📦批量</span>'
+                        html += '<button onclick="player.stock.batchSize=Math.max(1,(player.stock.batchSize||1)-1)" style="border:none;border-radius:5px;padding:3px 10px;font-size:13px;font-weight:700;background:rgba(255,255,255,0.06);color:#AAA;cursor:pointer;line-height:1">−</button>'
+                        html += '<b style="font-size:14px;color:#80CBC4;min-width:36px;text-align:center">' + bs + '</b>'
+                        html += '<button onclick="player.stock.batchSize=Math.min(10,(player.stock.batchSize||1)+1)" style="border:none;border-radius:5px;padding:3px 10px;font-size:13px;font-weight:700;background:rgba(255,255,255,0.06);color:#AAA;cursor:pointer;line-height:1">+</button>'
+                        html += '</div>'
+                    }
+                    html += '</div>'
+                    return html
                 }],
                 ["display-text", function () {
                     let p = player.stock
                     if (!p || !p.unlocked) return ""
-                    let defs = getStockDefs()
-                    let hasHoldings = false
-                    let html = '<div style="font-size:12px">'
+                    let defs = getStockDefs(), hasHoldings = false, html = ''
+                    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
                     for (let code in defs) {
                         let h = p.holdings[code] || new Decimal(0)
-                        if (h.gt(0)) {
-                            hasHoldings = true
-                            let d = defs[code]
-                            let price = p.prices[code]
-                            let avgPrice = p.avgPrices[code] || new Decimal(0)
-                            let pnl = price.sub(avgPrice).times(h)
-                            let pnlColor = pnl.gte(0) ? "#4CAF50" : "#F44336"
-                            html += '<div style="margin:6px 0;padding:6px;border:1px solid rgba(255,255,255,0.1);border-radius:6px">'
-                            html += d.icon + ' <b>' + d.name + '</b><br>'
-                            html += format(h, 0) + '股 × ' + format(price) + ' = ' + format(h.times(price))
-                            if (avgPrice.gt(0)) {
-                                html += '<br>均价: ' + format(avgPrice) + ' | 盈亏: <span style="color:' + pnlColor + '">' + (pnl.gte(0) ? '+' : '') + format(pnl) + '</span>'
-                            }
-                            html += '</div>'
+                        if (!h.gt(0)) continue
+                        hasHoldings = true
+                        let d = defs[code], price = p.prices[code], avgPrice = p.avgPrices[code] || new Decimal(0)
+                        let mv = h.times(price), cb = avgPrice.gt(0) ? avgPrice.times(h) : new Decimal(0)
+                        let pnl = avgPrice.gt(0) ? price.sub(avgPrice).times(h) : new Decimal(0)
+                        let pct = cb.gt(0) ? pnl.div(cb).times(100) : new Decimal(0)
+                        let up = pnl.gte(0), ac = up ? "#00E676" : "#FF5252", sn = up ? "+" : ""
+                        html += '<div style="background:linear-gradient(135deg,rgba(20,22,28,0.9),rgba(24,26,34,0.9));border:1px solid rgba(255,255,255,0.08);border-left:3px solid ' + ac + ';border-radius:10px;padding:10px">'
+                        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+                        html += '<div style="display:flex;align-items:center;gap:8px;min-width:0"><span style="font-size:20px;flex-shrink:0">' + d.icon + '</span>'
+                        html += '<div style="min-width:0"><div style="font-weight:700;font-size:12px;color:#DDD;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + d.name + '</div>'
+                        html += '<div style="font-size:8px;color:#667788">' + d.tag + '</div></div></div>'
+                        html += '<div style="text-align:right;font-size:14px;font-weight:800;color:#FFF;font-family:monospace;flex-shrink:0">' + format(price) + '</div></div>'
+                        html += '<div style="font-size:10px;line-height:1.7">'
+                        html += '<div style="display:flex;justify-content:space-between"><span style="color:#667788">持仓</span><span style="color:#CCC">' + format(h, 0) + '股</span></div>'
+                        html += '<div style="display:flex;justify-content:space-between"><span style="color:#667788">市值</span><span style="color:#CCC">' + format(mv) + '</span></div>'
+                        if (avgPrice.gt(0)) {
+                            html += '<div style="display:flex;justify-content:space-between"><span style="color:#667788">均价</span><span style="color:#CCC">' + format(avgPrice) + '</span></div>'
+                            html += '<div style="display:flex;justify-content:space-between"><span style="color:#667788">盈亏</span><span style="color:' + ac + ';font-weight:600">' + sn + format(pnl) + ' (' + sn + format(pct) + '%)</span></div>'
                         }
+                        html += '</div></div>'
                     }
-                    if (!hasHoldings) html += '<div style="text-align:center;color:#888;padding:20px">暂无持仓<br>在「行情」标签中选择股票买入</div>'
                     html += '</div>'
+                    if (!hasHoldings) html += '<div style="text-align:center;padding:30px 20px"><div style="font-size:36px;margin-bottom:8px">📭</div><div style="color:#667788;font-size:12px">暂无持仓 · 前往「行情」开始交易</div></div>'
                     return html
                 }],
             ]
         },
         "快讯": {
+            unlocked() { return hasMilestone("stock", 0) },
             content: [
                 ["display-text", function () {
                     let p = player.stock
-                    if (!p || !p.unlocked || !p.events || p.events.length === 0) return '<div style="text-align:center;color:#888;padding:20px">暂无市场快讯</div>'
-                    let html = '<div style="font-size:12px;max-height:400px;overflow-y:auto">'
-                    for (let i = 0; i < Math.min(p.events.length, 30); i++) {
-                        let ev = p.events[i]
-                        let color = ev.includes("📈") ? "#4CAF50" : "#F44336"
-                        html += '<div style="color:' + color + ';margin:3px 0;padding:4px;border-bottom:1px solid rgba(255,255,255,0.04)">' + ev + '</div>'
+                    if (!p || !p.unlocked || !p.events || p.events.length === 0) return '<div style="text-align:center;padding:30px 20px"><div style="font-size:36px;margin-bottom:8px">📰</div><div style="color:#667788;font-size:12px">暂无市场快讯 · 行情波动时自动推送</div></div>'
+                    let html = ''
+                    if (p.eventPreview) {
+                        html += '<div style="background:rgba(255,213,79,0.06);border:1px solid rgba(255,213,79,0.15);border-radius:8px;padding:6px 8px;margin-bottom:6px;font-size:11px;color:#FFD54F">⏳ 预告: ' + p.eventPreview.msg + '</div>'
                     }
-                    html += '</div>'
+                    html += '<div style="font-size:10px;color:#667788;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;padding:0 2px">📋 实时快讯</div>'
+                    for (let i = 0; i < Math.min(p.events.length, 30); i++) {
+                        let ev = p.events[i], isUp = ev.includes("📈")
+                        let color = isUp ? "#00E676" : "#FF5252"
+                        let bg = isUp ? "rgba(0,230,118,0.03)" : "rgba(255,82,82,0.03)"
+                        html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;margin-bottom:3px;background:' + bg + ';border-left:2px solid ' + color + ';border-radius:0 6px 6px 0;font-size:11px">'
+                        html += '<span style="color:' + color + ';line-height:1.4">' + ev + '</span></div>'
+                    }
                     return html
                 }],
             ]
@@ -754,23 +901,24 @@ addLayer("stock", {
             done() { return layers.stock.getTotalAsset().gte(2000) },
         },
         2: {
-            requirementDescription: "总资产达到 10,000",
-            effectDescription: "解锁杠杆交易（最高 1.5 倍）",
-            done() { return layers.stock.getTotalAsset().gte(10000) },
+            requirementDescription: "解锁 G002 后",
+            effectDescription: "解锁批量交易 (batchSize 可调 1~10)",
+            done() { let p=player.stock; return p.unlockedStocks && p.unlockedStocks["G002"] },
         },
         3: {
-            requirementDescription: "总资产达到 100,000",
-            effectDescription: "解锁第 6 只神秘股票",
-            done() { return layers.stock.getTotalAsset().gte(100000) },
+            requirementDescription: "解锁 G003 后",
+            effectDescription: "提前解锁第 5 只股票 G005",
+            done() { let p=player.stock; return p.unlockedStocks && p.unlockedStocks["G003"] },
+            onComplete() { if (player.stock.unlockedStocks) player.stock.unlockedStocks["G005"] = true },
         },
         4: {
-            requirementDescription: "总资产达到 500,000",
+            requirementDescription: "总资产达到 50,000",
             effectDescription: "解锁自动交易机器人",
-            done() { return layers.stock.getTotalAsset().gte(500000) },
+            done() { return layers.stock.getTotalAsset().gte(50000) },
         },
         5: {
             requirementDescription: "总资产达到 1,000,000",
-            effectDescription: "解锁做空机制，手续费降至最低 0.05%",
+            effectDescription: "手续费降至最低 0.05%",
             done() { return layers.stock.getTotalAsset().gte(1000000) },
         },
     },
@@ -788,7 +936,7 @@ addLayer("stock", {
         },
         12: {
             title: "📰 资讯订阅",
-            description: "重大事件提前 3 秒预告",
+            description: "重大事件提前 3 秒预告 (<b>已生效</b>)",
             cost: new Decimal(500),
             currencyInternalName: "capital",
             currencyLayer: "stock",
@@ -798,7 +946,7 @@ addLayer("stock", {
         },
         21: {
             title: "📐 量化工具",
-            description: "解锁止盈止损设置",
+            description: "解锁止盈止损 (<b>已生效</b>，在持仓页设置)",
             cost: new Decimal(2000),
             currencyInternalName: "capital",
             currencyLayer: "stock",
@@ -809,7 +957,7 @@ addLayer("stock", {
         },
         22: {
             title: "🔬 深度研究",
-            description: "显示每只股票的趋势方向提示",
+            description: "显示趋势方向提示 (<b>已生效</b>)",
             cost: new Decimal(10000),
             currencyInternalName: "capital",
             currencyLayer: "stock",
@@ -820,7 +968,7 @@ addLayer("stock", {
         },
         31: {
             title: "⚡ 闪电交易",
-            description: "交易手续费再减半 (0.15%→0.075%)",
+            description: "交易手续费再减半 (0.15%→0.075%) (<b>已生效</b>)",
             cost: new Decimal(50000),
             currencyInternalName: "capital",
             currencyLayer: "stock",
@@ -832,108 +980,4 @@ addLayer("stock", {
     },
 
     achievements: {},
-
-    clickables: {
-        11: {
-            title: "🟢 买入 鼎盛金融",
-            display() {
-                let p = player.stock, code = "G001"
-                let price = p.prices[code], fee = getStockFee()
-                return "价格: " + format(price) + " | 手续费: " + (fee * 100).toFixed(2) + "%<br>总成本: " + format(price.times(1 + fee)) + " | 资金: " + format(p.capital)
-            },
-            canClick() { let p = player.stock; return p.capital.gte(p.prices["G001"].times(1.003)) },
-            onClick() { buyStock("G001") },
-            style: { "border-color": "#4CAF50" },
-        },
-        12: {
-            title: "🔴 卖出 鼎盛金融",
-            display() {
-                let p = player.stock, code = "G001"
-                return "价格: " + format(p.prices[code]) + " | 持有: " + format(p.holdings[code], 0) + "股<br>到手: " + format(p.prices[code].times(1 - getStockFee()))
-            },
-            canClick() { return player.stock.holdings["G001"].gte(1) },
-            onClick() { sellStock("G001") },
-            style: { "border-color": "#F44336" },
-        },
-        21: {
-            title: "💻 买入 凌云科技",
-            display() {
-                let p = player.stock, code = "G002", fee = getStockFee()
-                return "价格: " + format(p.prices[code]) + " | 手续费: " + (fee * 100).toFixed(2) + "%<br>总成本: " + format(p.prices[code].times(1 + fee)) + " | 资金: " + format(p.capital)
-            },
-            canClick() { let p = player.stock; return p.capital.gte(p.prices["G002"].times(1.003)) },
-            onClick() { buyStock("G002") },
-            style: { "border-color": "#4CAF50" },
-        },
-        22: {
-            title: "🔴 卖出 凌云科技",
-            display() {
-                let p = player.stock, code = "G002"
-                return "价格: " + format(p.prices[code]) + " | 持有: " + format(p.holdings[code], 0) + "股<br>到手: " + format(p.prices[code].times(1 - getStockFee()))
-            },
-            canClick() { return player.stock.holdings["G002"].gte(1) },
-            onClick() { sellStock("G002") },
-            style: { "border-color": "#F44336" },
-        },
-        31: {
-            title: "🔬 买入 瀚海医药",
-            display() {
-                let p = player.stock, code = "G003", fee = getStockFee()
-                return "价格: " + format(p.prices[code]) + " | 手续费: " + (fee * 100).toFixed(2) + "%<br>总成本: " + format(p.prices[code].times(1 + fee)) + " | 资金: " + format(p.capital)
-            },
-            canClick() { let p = player.stock; return p.capital.gte(p.prices["G003"].times(1.003)) },
-            onClick() { buyStock("G003") },
-            style: { "border-color": "#4CAF50" },
-        },
-        32: {
-            title: "🔴 卖出 瀚海医药",
-            display() {
-                let p = player.stock, code = "G003"
-                return "价格: " + format(p.prices[code]) + " | 持有: " + format(p.holdings[code], 0) + "股<br>到手: " + format(p.prices[code].times(1 - getStockFee()))
-            },
-            canClick() { return player.stock.holdings["G003"].gte(1) },
-            onClick() { sellStock("G003") },
-            style: { "border-color": "#F44336" },
-        },
-        41: {
-            title: "🔋 买入 天域半导体",
-            display() {
-                let p = player.stock, code = "G004", fee = getStockFee()
-                return "价格: " + format(p.prices[code]) + " | 手续费: " + (fee * 100).toFixed(2) + "%<br>总成本: " + format(p.prices[code].times(1 + fee)) + " | 资金: " + format(p.capital)
-            },
-            canClick() { let p = player.stock; return p.capital.gte(p.prices["G004"].times(1.003)) },
-            onClick() { buyStock("G004") },
-            style: { "border-color": "#4CAF50" },
-        },
-        42: {
-            title: "🔴 卖出 天域半导体",
-            display() {
-                let p = player.stock, code = "G004"
-                return "价格: " + format(p.prices[code]) + " | 持有: " + format(p.holdings[code], 0) + "股<br>到手: " + format(p.prices[code].times(1 - getStockFee()))
-            },
-            canClick() { return player.stock.holdings["G004"].gte(1) },
-            onClick() { sellStock("G004") },
-            style: { "border-color": "#F44336" },
-        },
-        51: {
-            title: "⛏️ 买入 寰宇矿业",
-            display() {
-                let p = player.stock, code = "G005", fee = getStockFee()
-                return "价格: " + format(p.prices[code]) + " | 手续费: " + (fee * 100).toFixed(2) + "%<br>总成本: " + format(p.prices[code].times(1 + fee)) + " | 资金: " + format(p.capital)
-            },
-            canClick() { let p = player.stock; return p.capital.gte(p.prices["G005"].times(1.003)) },
-            onClick() { buyStock("G005") },
-            style: { "border-color": "#4CAF50" },
-        },
-        52: {
-            title: "🔴 卖出 寰宇矿业",
-            display() {
-                let p = player.stock, code = "G005"
-                return "价格: " + format(p.prices[code]) + " | 持有: " + format(p.holdings[code], 0) + "股<br>到手: " + format(p.prices[code].times(1 - getStockFee()))
-            },
-            canClick() { return player.stock.holdings["G005"].gte(1) },
-            onClick() { sellStock("G005") },
-            style: { "border-color": "#F44336" },
-        },
-    },
 })

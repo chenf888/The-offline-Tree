@@ -1,7 +1,7 @@
 let modInfo = {
 	name: "在/离线树",
 	author: "陈风就是浪",
-	id: "The-on-or-offline-Tree",
+	id: "The-on-offline-Tree",
 	pointsName: "离线点数",
 	modFiles: ["layers.js", "tree.js"],
 
@@ -13,11 +13,13 @@ let modInfo = {
 
 // Set your version in num and name
 let VERSION = {
-	num: "0.2.0",
+	num: "0.2.1",
 	name: "在/离线树",
 }
 
 let changelog = `<h1>更新日志</h1><br>
+    <h3>v0.2.1</h3><br>
+        fix-由于id变更，导致所有玩家存档全部失效，请硬重置后游玩<br>
     <h3>v0.2.0</h3><br>
 	    离线树进入新时代，更名为在/离线树。游戏链接展示不变，点击<a href="https://qm.qq.com/q/Ae8KXBQ4HS" target="_blank" style="color:#2196F3;text-decoration:underline">这里</a>加入QQ群<br>
 		主要玩法准备由单纯的离线变为以小游戏为主的在/离线结合<br>
