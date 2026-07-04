@@ -226,7 +226,7 @@ addLayer("on", {
     layerShown() { return hasMilestone("o", 0) },
 
     update(diff) {
-        if (!player.o.points.gte(10)) return
+        if (!hasMilestone("o", 0)) return
         let gain = new Decimal(diff).div(3600)
         player[this.layer].points = player[this.layer].points.add(gain)
     },
